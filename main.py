@@ -15,7 +15,7 @@ def capture_camera_feed():
     cap = cv2.VideoCapture(0)
 
     # Initialize model once, outside the loop
-    model = YOLO('yolo11n-seg.pt')
+    model = YOLO('models/hand_detector/best.pt')
 
     while cap.isOpened():
         ret, frame = cap.read()
