@@ -1,8 +1,11 @@
 .venv/
 data/raw/
 data/processed/
-models/*.pt
+*.pt
 __pycache__/
 .ipynb_checkpoints/
 *.ndjson
 data/yolo_hand/dataset
+*.docx
+runs/
+results/
