@@ -16,7 +16,7 @@ This is a **graded individual assignment** (CSC61304, due 24 Nov 2026). The user
 **You DO NOT:**
 - Write, draft, outline, or edit **any part of the report**: no abstract, introduction, literature review, captions, analysis, interpretation, ethics, conclusion, references, or README prose beyond a plain install/run note
 - Write or run training, tuning, evaluation, EDA, preprocessing, or demo code
-- Generate pseudo-labels, train YOLO, or train any classifier
+- Generate pseudo-labels, train MediaPipe, or train any classifier
 - Choose models, hyperparameters, or splits for the user
 - Fill in `logs/progress_log.md` or any evidence file with content (create empty files only)
 - Produce results, metrics, or conclusions of any kind
@@ -29,8 +29,9 @@ Section 7 is the user's own plan, included **for reference only**. Do not execut
 
 - **Course:** CSC61304 Machine Learning and Intelligent Systems, Individual Assignment (Taylor's University).
 - **Goal:** recognise Nepali Sign Language (NSL) characters from a webcam in real time.
-- **Planned pipeline (user's design):** webcam frame → YOLO segmentation model separates the hand from the background → hand crop, 224×224 → PyTorch classifier → one of 36 NSL character classes.
+- **Planned pipeline (user's design):** webcam frame → MediaPipe Hand Landmarker detects hand landmarks → hand crop from landmarks, 224×224 → PyTorch classifier → one of 36 NSL character classes.
 - **Framework:** PyTorch only (no TensorFlow/Keras).
+- **Hand detection:** MediaPipe Hand Landmarker (no YOLO/ultralytics).
 - **User's machine:** Windows, PowerShell / Windows Terminal. Use PowerShell syntax. The user says the machine has an NVIDIA GPU that meets CUDA requirements. **Verify this, do not assume it.**
 
 ## 2. Environment and CUDA
@@ -63,7 +64,7 @@ PyTorch's pip wheels include their own CUDA runtime libraries. For this project 
 1. a recent enough **NVIDIA driver** (checked above), and
 2. a **CUDA build of PyTorch**.
 
-Do **not** install the standalone CUDA Toolkit or cuDNN installers unless a real, specific error shows they are required. They are not needed to train or run PyTorch/YOLO models here.
+Do **not** install the standalone CUDA Toolkit or cuDNN installers unless a real, specific error shows they are required. They are not needed to train or run PyTorch/MediaPipe models here.
 
 ### 2.4 Install PyTorch with CUDA (before anything else)
 
@@ -84,7 +85,6 @@ Create `requirements.txt`. Do **not** list `torch` or `torchvision` in it, since
 
 ```
 timm
-ultralytics
 opencv-python
 mediapipe
 datasets
@@ -124,7 +124,7 @@ python -c "import torch; x=torch.randn(2048,2048,device='cuda'); print((x@x).sum
 ```
 
 **Troubleshooting if `cuda available` is `False` but `nvidia-smi` works:**
-- The version string ends in `+cpu`, or `torch.version.cuda` is `None`: a CPU-only wheel is installed. This usually happens because installing `ultralytics` or another package pulled in its own `torch`. Fix: uninstall torch/torchvision, then reinstall them with the command from 2.4.
+- The version string ends in `+cpu`, or `torch.version.cuda` is `None`: a CPU-only wheel is installed. This usually happens because installing `mediapipe` or another package pulled in its own `torch`. Fix: uninstall torch/torchvision, then reinstall them with the command from 2.4.
 - The driver is too old for the chosen CUDA build: choose a lower CUDA build in the selector, or ask the user to update the driver.
 - Python version is not supported by the wheel: create the venv with Python 3.11.
 - Run `pip list | findstr -i "torch nvidia"` and include the output when reporting to the user.
@@ -144,7 +144,7 @@ nsl-project/
 ├─ data/
 │  ├─ raw/                 # downloaded NSL dataset (do NOT commit)
 │  ├─ processed/
-│  └─ yolo_hand/
+│  └─ mediapipe_hand/
 ├─ notebooks/
 ├─ src/
 │  └─ config.py            # see below
@@ -180,11 +180,11 @@ nsl-project/
 ## 5. Smoke tests
 
 Create `scripts/check_env.py` that prints (and does nothing else):
-1. Python, torch, torchvision, cv2, ultralytics, timm versions
+1. Python, torch, torchvision, cv2, mediapipe, timm versions
 2. CUDA availability, GPU name, VRAM
 3. Whether one dataset image can be opened with OpenCV and its shape
 4. Whether the webcam opens: `cv2.VideoCapture(0).isOpened()` (read one frame, release it, and do not save it)
-5. Whether Ultralytics can load a small pretrained segmentation model (for example `yolo11n-seg.pt`; check the Ultralytics docs for current names) and run **one** inference on a single dataset image on the GPU. This only confirms the install. It is not training and not a result.
+5. Whether MediaPipe Hand Landmarker can load the model (`hand_landmarker.task`), run detection on a single dataset image, and return hand landmarks. This only confirms the install. It is not training and not a result.
 
 **CHECKPOINT 3:** Run it and report the output as it is.
 
@@ -196,11 +196,11 @@ Reply with a short plain summary of: environment location and Python version; GP
 
 Kept here only so you understand the design the environment must support.
 
-- **Hand segmentation:** the NSL dataset has class labels only (no boxes or masks), so YOLO-seg cannot train on it directly and COCO models have no "hand" class. The user will decide how to obtain hand labels (auto-generated pseudo-labels or a public hand dataset) and train a single-class `hand` YOLO-seg model. Note that Ultralytics is AGPL-3.0.
-- **Classifier input variants:** full image, YOLO crop, masked crop.
+- **Hand detection:** MediaPipe Hand Landmarker provides 21 hand landmarks per detected hand. No training needed — uses Google's pre-trained model. Hand crops are derived from landmark bounding boxes.
+- **Classifier input variants:** full image, MediaPipe landmark-based crop, masked crop (using landmarks to create mask).
 - **Splitting:** stratified train/val/test with fixed seed, with near-duplicate checking before the split to avoid leakage.
 - **Models to compare:** a CNN transfer-learning baseline (ResNet50 or MobileNetV2) against a transformer (ViT or Swin via `timm`).
 - **Tuning:** Optuna on the validation set only.
 - **Evaluation:** accuracy, macro-F1, confusion matrix (needs a Devanagari-capable font such as Noto Sans Devanagari in matplotlib), error analysis, and a small self-collected webcam test.
-- **Demo:** real-time OpenCV webcam pipeline with temporal smoothing and a confidence threshold.
+- **Demo:** real-time OpenCV webcam pipeline with MediaPipe hand detection, temporal smoothing, and a confidence threshold.
 - **Evidence:** the user keeps their own progress log, screenshots, notebooks (a `.ipynb` link is required in the report appendix), and AI-use screenshots (prompts and results).
