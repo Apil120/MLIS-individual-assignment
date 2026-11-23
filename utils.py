@@ -8,6 +8,36 @@ from pathlib import Path
 MODEL_URL = "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task"
 MODEL_PATH = Path("models/hand_landmarker.task")
 
+# Hand landmark connections (21 landmarks, 0-20)
+# MediaPipe hand connections: (start, end) pairs
+HAND_CONNECTIONS = [
+    (0, 1), (1, 2), (2, 3), (3, 4),        # Thumb
+    (0, 5), (5, 6), (6, 7), (7, 8),        # Index finger
+    (0, 9), (9, 10), (10, 11), (11, 12),   # Middle finger
+    (0, 13), (13, 14), (14, 15), (15, 16), # Ring finger
+    (0, 17), (17, 18), (18, 19), (19, 20), # Pinky
+    (5, 9), (9, 13), (13, 17)              # Palm connections
+]
+
+
+def draw_hand_landmarks(frame, hand_landmarks):
+    """Draw hand landmarks and connections on the frame."""
+    h, w, _ = frame.shape
+
+    # Draw landmarks
+    for landmark in hand_landmarks:
+        x, y = int(landmark.x * w), int(landmark.y * h)
+        cv2.circle(frame, (x, y), 4, (0, 255, 0), -1)
+
+    # Draw connections
+    for connection in HAND_CONNECTIONS:
+        start_idx, end_idx = connection
+        start = hand_landmarks[start_idx]
+        end = hand_landmarks[end_idx]
+        start_pt = (int(start.x * w), int(start.y * h))
+        end_pt = (int(end.x * w), int(end.y * h))
+        cv2.line(frame, start_pt, end_pt, (255, 0, 0), 2)
+
 def download_model_if_needed():
     """Download MediaPipe hand landmarker model if it doesn't exist."""
     MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)

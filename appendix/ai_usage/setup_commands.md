@@ -193,3 +193,116 @@ Environment check complete
 ```
 
 All checks passed. Environment is ready for development.
+
+---
+
+## 12. MediaPipe HandLandmarker Integration (Post-Setup Development)
+
+### 12.1 Created MediaPipe Testing Script
+
+```powershell
+# Created testing_mediapipe.py with MediaPipe HandLandmarker
+# Auto-downloads hand_landmarker.task model from Google
+# Detects 21 hand landmarks with connections and bounding box
+```
+
+### 12.2 Reorganized Code Structure
+
+```powershell
+# Created utils.py - Shared utilities:
+#   - HAND_CONNECTIONS (21 landmark connections)
+#   - download_model_if_needed()
+#   - create_detector() - MediaPipe HandLandmarker
+#   - draw_hand_landmarks() - Draw landmarks + skeleton
+
+# Updated main.py - Clean entry point:
+#   - Imports from utils and classifier
+#   - Real-time webcam with hand detection + NSL classification
+```
+
+### 12.3 Updated setup.md for MediaPipe Pipeline
+
+```powershell
+# Changed pipeline from YOLO → MediaPipe Hand Landmarker
+# Removed ultralytics from requirements.txt
+# Updated smoke test to verify MediaPipe instead of YOLO
+# Updated folder structure: yolo_hand/ → mediapipe_hand/
+# Updated reference plan (Section 7) for MediaPipe approach
+```
+
+### 12.4 Dataset Exploration Script
+
+```powershell
+python scripts/explore_dataset.py
+```
+
+**Output:**
+```
+Plain Background:  36 classes, 1000 images/class = 36,000 total
+Random Background: 36 classes, 500 images/class  = 18,000 total
+Grand Total: 54,000 images
+Resolution: 300x300 JPEG, 3-channel BGR
+```
+
+### 12.5 Added MediaPipe Visualization to eda.ipynb
+
+```python
+# Cell: MediaPipe HandLandmarker Visualization
+# - Builds HandLandmarker (RunningMode.IMAGE, num_hands=1)
+# - Samples 4 plain + 4 random background images from labels.csv
+# - Runs detection, draws 21 landmarks + connections + bbox
+# - Displays 2x4 grid with titles: "label | background | detected/not detected"
+```
+
+### 12.6 Created CNN Classifier (classifier.py)
+
+```python
+# CNN architecture matching trained model (best_model.pth):
+#   - 3 Conv layers (1→16→32→64) + MaxPool + AdaptiveAvgPool(7x7)
+#   - 2 FC layers (64*7*7→512→36) + Dropout(0.5)
+# 
+# NSLClassifier class:
+#   - Loads best_model.pth weights
+#   - Preprocessing: Resize(300,300) → Grayscale → Normalize(0.5, 0.5)
+#   - Predicts class_idx, Devanagari char, confidence, full probabilities
+#   - Extracts hand crop from MediaPipe landmarks with padding
+#
+# CLASS_NAMES mapping (36 classes from dataset README):
+#   0:क  1:ख  2:ग  3:घ  4:ङ  5:च  6:छ  7:ज  8:झ  9:ञ
+#   10:ट 11:ठ 12:ड 13:ढ 14:ण 15:त 16:थ 17:द 18:ध 19:न
+#   20:प 21:फ 22:ब 23:भ 24:म 25:य 26:र 27:ल 28:व 29:श
+#   30:ष 31:स 32:ह 33:क्ष 34:त्र 35:ज्ञ
+```
+
+### 12.7 Integrated MediaPipe + CNN in main.py
+
+```python
+# Real-time pipeline:
+#   1. Webcam frame → BGR to RGB
+#   2. MediaPipe HandLandmarker detects landmarks
+#   3. Draw landmarks (green) + connections (blue) + bbox (yellow)
+#   4. Extract hand crop from landmarks
+#   5. CNN predicts NSL character + confidence
+#   6. Display prediction on frame (color-coded by confidence)
+```
+
+**Test Result:**
+```
+Predicted: Class 0 - Confidence: 98.46%
+(Class 0 = 'क' - matches plain_background/0/0.jpg)
+```
+
+### 12.8 Added Model Evaluation Cell to eda.ipynb
+
+```python
+# Cell: Model Evaluation - Precision, Recall, F1-Score, Confusion Matrix
+# - Loads best_model.pth, recreates exact test split (20%, stratified, seed=42)
+# - Runs inference on 10,800 test images
+# - Computes:
+#   * Macro & Weighted Precision, Recall, F1
+#   * Per-class metrics for all 36 classes
+#   * Confusion Matrix (counts) - 36x36 heatmap
+#   * Normalized Confusion Matrix (row-wise %) - 36x36 heatmap
+#   * Per-class F1 bar chart with macro F1 reference line
+#   * Classification Report as DataFrame
+```

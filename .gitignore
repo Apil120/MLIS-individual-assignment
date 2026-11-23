@@ -11,3 +11,4 @@ runs/
 results/
 *.task
 *.csv
+*.pth
