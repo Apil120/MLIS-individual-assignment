@@ -116,35 +116,3 @@ def detect_hand(frame, detector):
 
     return annotated_frame
 
-# ==========================================
-# Example Usage: Run with Webcam
-# ==========================================
-if __name__ == "__main__":
-    print("Initializing detector...")
-    detector = create_detector()
-    print("Detector ready! Press 'q' to quit.")
-
-    cap = cv2.VideoCapture(0)
-    
-    # Optional: Set a specific webcam resolution for better performance
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-
-    while cap.isOpened():
-        ret, frame = cap.read()
-        if not ret:
-            print("Failed to grab frame")
-            break
-
-        # Process the frame
-        result_frame = detect_hand(frame, detector)
-
-        # Display the result
-        cv2.imshow("Hand Detection (300x300 Box)", result_frame)
-
-        # Break loop on 'q' key press
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
-
-    cap.release()
-    cv2.destroyAllWindows()
