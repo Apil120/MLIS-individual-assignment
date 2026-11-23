@@ -9,3 +9,4 @@ data/yolo_hand/dataset
 *.docx
 runs/
 results/
+*.task

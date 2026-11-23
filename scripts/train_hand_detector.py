@@ -1,5 +1,6 @@
 
 import shutil
+import json
 from pathlib import Path
 
 from ultralytics import YOLO
@@ -13,8 +14,10 @@ DATA_YAML = DATASET_DIR / "data.yaml"
 RESULTS_DIR = ROOT / "results" / "metrics"
 MODEL_DIR = ROOT / "models" / "hand_detector"
 
-MODEL_NAME = "yolo11n.pt"
+MODEL_NAME = "yolo11s.pt"
 
+IMGSZ = 300
+BATCH = 8
 
 def evaluate_on_test(weights_path):
     """Evaluate the final weights on the held-out test split."""
@@ -147,7 +150,7 @@ def train_model():
             "Best model weights were not generated."
         )
 
-    destination = MODEL_DIR / "best.pt"
+    destination = MODEL_DIR / "best_model_hand_detector.pt"
 
     shutil.copy2(best_weights, destination)
 
