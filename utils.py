@@ -8,7 +8,6 @@ from pathlib import Path
 MODEL_URL = "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task"
 MODEL_PATH = Path("models/hand_landmarker.task")
 
-
 def download_model_if_needed():
     """Download MediaPipe hand landmarker model if it doesn't exist."""
     MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -19,7 +18,6 @@ def download_model_if_needed():
     else:
         print(f"Model already exists at {MODEL_PATH}")
 
-
 def create_detector():
     """Create and return a MediaPipe HandLandmarker detector."""
     download_model_if_needed()
@@ -28,34 +26,48 @@ def create_detector():
     options = vision.HandLandmarkerOptions(
         base_options=base_options,
         num_hands=2,
-        min_hand_detection_confidence=0.5,
-        min_hand_presence_confidence=0.5,
-        min_tracking_confidence=0.5
+        min_hand_detection_confidence=0.4,
+        min_hand_presence_confidence=0.4,
+        min_tracking_confidence=0.4
     )
     return vision.HandLandmarker.create_from_options(options)
 
-
 def draw_hand_rectangle(frame, hand_landmarks):
-    """Draw only a bounding box rectangle around the hand."""
+    """Draw a fixed 300x300 bounding box centered on the hand."""
     h, w, _ = frame.shape
+    box_size = 300
+    half_size = box_size // 2
 
-    # Calculate bounding box coordinates from landmarks
+    # 1. Calculate the center (centroid) of the hand from all landmarks
     x_coords = [lm.x for lm in hand_landmarks]
     y_coords = [lm.y for lm in hand_landmarks]
     
-    x_min, x_max = int(min(x_coords) * w), int(max(x_coords) * w)
-    y_min, y_max = int(min(y_coords) * h), int(max(y_coords) * h)
+    center_x_norm = sum(x_coords) / len(x_coords)
+    center_y_norm = sum(y_coords) / len(y_coords)
     
-    # Draw bounding box around hand
+    # Convert normalized coordinates (0.0 to 1.0) to pixel coordinates
+    center_x_px = int(center_x_norm * w)
+    center_y_px = int(center_y_norm * h)
+
+    # 2. Calculate the top-left and bottom-right corners of the 300x300 box
+    x_min = center_x_px - half_size
+    x_max = center_x_px + half_size
+    y_min = center_y_px - half_size
+    y_max = center_y_px + half_size
+
+    # 3. Clamp coordinates to ensure the box doesn't draw outside the frame boundaries
+    x_min = max(0, x_min)
+    y_min = max(0, y_min)
+    x_max = min(w, x_max)
+    y_max = min(h, y_max)
+
+    # 4. Draw bounding box and label
     cv2.rectangle(frame, (x_min, y_min), (x_max, y_max), (0, 255, 255), 2)
-
-    # Add label (optional: remove these 2 lines if you want strictly ONLY the rectangle)
     cv2.putText(frame, "Hand", (x_min, y_min - 10),
-               cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
-
+                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
 
 def detect_hand(frame, detector):
-    """Detect hand and draw only the bounding box rectangle on the frame."""
+    """Detect hand and draw the 300x300 bounding box on the frame."""
     # Convert BGR to RGB for MediaPipe
     rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
@@ -73,3 +85,36 @@ def detect_hand(frame, detector):
             draw_hand_rectangle(annotated_frame, hand_landmarks)
 
     return annotated_frame
+
+# ==========================================
+# Example Usage: Run with Webcam
+# ==========================================
+if __name__ == "__main__":
+    print("Initializing detector...")
+    detector = create_detector()
+    print("Detector ready! Press 'q' to quit.")
+
+    cap = cv2.VideoCapture(0)
+    
+    # Optional: Set a specific webcam resolution for better performance
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret:
+            print("Failed to grab frame")
+            break
+
+        # Process the frame
+        result_frame = detect_hand(frame, detector)
+
+        # Display the result
+        cv2.imshow("Hand Detection (300x300 Box)", result_frame)
+
+        # Break loop on 'q' key press
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
+    cap.release()
+    cv2.destroyAllWindows()
