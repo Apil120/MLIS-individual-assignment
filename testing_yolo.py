@@ -1,5 +1,3 @@
-## Main entry point for the application
-
 import cv2
 from ultralytics import YOLO
 
