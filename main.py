@@ -44,6 +44,8 @@ def capture_camera_feed():
                 if crop.size > 0:
                     class_idx, char, confidence, _ = classifier.predict(crop)
 
+                    print(f"Predicted Character: {char}, Class Index: {class_idx}, Confidence: {confidence:.2%}")
+
                     # Format prediction text
                     prediction_text = f"{char} (Class {class_idx}) - {confidence:.2%}"
                     prediction_color = (0, 255, 0) if confidence > 0.7 else (0, 255, 255)
